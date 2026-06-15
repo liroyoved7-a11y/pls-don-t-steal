@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #333; font-family: Arial; overflow: hidden; touch-action: none; }
+        #topBar { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
+        #muteBtn { font-size: 24px; cursor: pointer; background: none; border: 2px solid white; border-radius: 5px; color: white; padding: 5px 10px; }
+        canvas { border: 6px solid #fff; max-width: 100%; max-height: 80vh; cursor: pointer; }
+        #scoreBoard { color: white; font-size: 24px; font-weight: bold; }
+        #startBtn { padding: 20px 40px; font-size: 24px; cursor: pointer; background-color: #e91e63; color: white; border: none; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div id="topBar">
+        <button id="muteBtn">🎵</button>
+        <div id="scoreBoard">Score: 0 | Best: 0</div>
+    </div>
+    <button id="startBtn">התחל מרדף!</button>
+    <canvas id="gameCanvas" width="800" height="900"></canvas>
+    
+    <script>
+        const bgMusic = new Audio('https://files.catbox.moe/arb71c.mp3'); 
+        bgMusic.loop = true;
+        
+        const playerImg = new Image(); playerImg.src = 'https://i.ibb.co/tMYDLVpx/player.png';
+        const policeImg = new Image(); policeImg.src = 'https://i.ibb.co/KzmVLPp5/police.png';
+
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const laneWidth = 800 / 3;
+        let playerLane = 1, score = 0, gameOver = false, gameStarted = false;
+        let bestScore = localStorage.getItem('bestScore') || 0;
+        let obstacles = [{ y: -100, lane: 0, baseSpeed: 8 }];
+
+        function draw() {
+            // צביעת רקע הכביש
+            ctx.fillStyle = "#444";
+            ctx.fillRect(0, 0, 800, 900);
+
+            // ציור קווי הפרדה
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 10;
+            ctx.setLineDash([50, 30]);
+            ctx.beginPath(); ctx.moveTo(laneWidth, 0); ctx.lineTo(laneWidth, 900); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(laneWidth * 2, 0); ctx.lineTo(laneWidth * 2, 900); ctx.stroke();
+            ctx.setLineDash([]);
+
+            // ציור המכוניות לפני בדיקת הפסד
+            if (gameStarted || gameOver) {
+                ctx.drawImage(playerImg, (playerLane * laneWidth) + (laneWidth/2 - 50), 750, 100, 100);
+                obstacles.forEach(obs => {
+                    ctx.drawImage(policeImg, (obs.lane * laneWidth) + (laneWidth/2 - 50), obs.y, 100, 100);
+                });
+            }
+
+            if (gameOver) {
+                // המלבן האדום שיוצר את האפקט
+                ctx.fillStyle = "rgba(255, 0, 0, 0.5)"; 
+                ctx.fillRect(0, 0, 800, 900);
+                
+                bgMusic.pause();
+                ctx.fillStyle = "white"; ctx.font = "bold 70px Arial"; ctx.textAlign = "center";
+                ctx.fillText("GAME OVER!", 400, 450);
+                ctx.font = "30px Arial";
+                ctx.fillText("לחץ כדי להתחיל מחדש", 400, 520);
+                return;
+            }
+            if (!gameStarted) return;
+
+            score++; 
+            let currentScore = Math.floor(score/10);
+            scoreBoard.innerText = `Score: ${currentScore} | Best: ${bestScore}`;
+
+            obstacles.forEach(obs => {
+                let speedMult = (currentScore >= 1000) ? 4 : (currentScore >= 250 ? 1.5 : 1);
+                obs.y += obs.baseSpeed * speedMult;
+                if (obs.y > 900) { obs.y = -100; obs.lane = Math.floor(Math.random() * 3); }
+                if (obs.y > 700 && obs.y < 800 && playerLane === obs.lane) {
+                    gameOver = true;
+                    if (currentScore > bestScore) { bestScore = currentScore; localStorage.setItem('bestScore', bestScore); }
+                }
+            });
+            requestAnimationFrame(draw);
+        }
+
+        document.getElementById("startBtn").onclick = () => {
+            document.getElementById("startBtn").style.display = "none";
+            gameStarted = true;
+            bgMusic.play();
+            draw();
+        };
+
+        const handleInput = (e) => {
+            if (gameOver) { location.reload(); return; }
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const rect = canvas.getBoundingClientRect();
+            playerLane = Math.floor(((clientX - rect.left) / rect.width) * 3);
+        };
+        canvas.addEventListener("touchstart", handleInput);
+        canvas.addEventListener("mousedown", handleInput);
+    </script>
+</body>
+</html>
