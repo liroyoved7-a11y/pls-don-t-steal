@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <title>Don't run from the police-RG&Clan</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #333; font-family: Arial; overflow: hidden; touch-action: none; }
@@ -22,16 +24,24 @@
     <script>
         const bgMusic = new Audio('https://files.catbox.moe/arb71c.mp3'); 
         bgMusic.loop = true;
+        let isMuted = false;
         
         const playerImg = new Image(); playerImg.src = 'https://i.ibb.co/tMYDLVpx/player.png';
         const policeImg = new Image(); policeImg.src = 'https://i.ibb.co/KzmVLPp5/police.png';
 
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+        const muteBtn = document.getElementById("muteBtn");
         const laneWidth = 800 / 3;
         let playerLane = 1, score = 0, gameOver = false, gameStarted = false;
         let bestScore = localStorage.getItem('bestScore') || 0;
         let obstacles = [{ y: -100, lane: 0, baseSpeed: 8 }];
+
+        muteBtn.onclick = () => {
+            isMuted = !isMuted;
+            if (isMuted) { bgMusic.pause(); muteBtn.innerText = "🔇"; }
+            else { if(gameStarted && !gameOver) bgMusic.play(); muteBtn.innerText = "🎵"; }
+        };
 
         function draw() {
             // צביעת רקע הכביש
@@ -87,12 +97,13 @@
         document.getElementById("startBtn").onclick = () => {
             document.getElementById("startBtn").style.display = "none";
             gameStarted = true;
-            bgMusic.play();
+            if (!isMuted) bgMusic.play();
             draw();
         };
 
         const handleInput = (e) => {
             if (gameOver) { location.reload(); return; }
+            if (!gameStarted) return;
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const rect = canvas.getBoundingClientRect();
             playerLane = Math.floor(((clientX - rect.left) / rect.width) * 3);
